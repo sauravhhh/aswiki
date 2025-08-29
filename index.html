@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Assamese Wikipedia Search</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 10px; padding: 0; background: #fefefe; }
+  h1 { font-size: 1.5em; color: #2a3b8f; text-align: center; margin-bottom: 15px; }
+  form { text-align: center; margin-bottom: 15px; }
+  input[type="search"] {
+    width: 80%;
+    padding: 8px;
+    font-size: 1em;
+    border: 1px solid #aaa;
+    border-radius: 4px;
+  }
+  button {
+    padding: 8px 12px;
+    font-size: 1em;
+    margin-left: 5px;
+    background-color: #2a3b8f;
+    color: white;
+    border: none;
+    border-radius: 4px;
+  }
+  ul { list-style: none; padding: 0; }
+  li { margin-bottom: 12px; border-bottom: 1px solid #ddd; padding-bottom: 8px; }
+  a.title {
+    font-weight: bold;
+    font-size: 1.1em;
+    color: #1a2b7f;
+    text-decoration: none;
+  }
+  a.title:hover { text-decoration: underline; }
+  p.extract { color: #444; margin: 4px 0 0 0; }
+  #articleView {
+    margin-top: 15px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    background: white;
+    max-height: 60vh;
+    overflow-y: auto;
+  }
+  #articleView h2 {
+    font-size: 1.3em;
+    margin-top: 0;
+    color: #2a3b8f;
+  }
+  #backButton {
+    display: block;
+    margin: 10px auto 15px auto;
+    background-color: #555;
+    color: white;
+    padding: 6px 14px;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.9em;
+  }
+</style>
+</head>
+<body>
+  <h1>Assamese Wikipedia Search</h1>
+  <form id="searchForm">
+    <input type="search" id="searchInput" placeholder="Enter search term or topic" required />
+    <button type="submit">Search</button>
+  </form>
+  <ul id="results"></ul>
+  <div id="articleView" style="display:none;">
+    <button id="backButton">Go Back</button>
+    <div id="articleContent"></div>
+  </div>
+
+  <script>
+    const form = document.getElementById('searchForm');
+    const input = document.getElementById('searchInput');
+    const resultsList = document.getElementById('results');
+    const articleView = document.getElementById('articleView');
+    const articleContent = document.getElementById('articleContent');
+    const backButton = document.getElementById('backButton');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const query = input.value.trim();
+      if (!query) return;
+      resultsList.innerHTML = 'Searching...';
+      articleView.style.display = 'none';
+      resultsList.style.display = 'block';
+
+      const url = `https://as.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&utf8=&format=json&origin=*`;
+      try {
+        const response = await fetch(url);
+        const data = await response.json();
+        if (data.query.search.length === 0) {
+          resultsList.innerHTML = '<li>No results found</li>';
+          return;
+        }
+        resultsList.innerHTML = '';
+        data.query.search.forEach(item => {
+          const li = document.createElement('li');
+          const a = document.createElement('a');
+          a.href = '#';
+          a.textContent = item.title;
+          a.className = 'title';
+          a.addEventListener('click', (evt) => {
+            evt.preventDefault();
+            showArticle(item.pageid);
+          });
+          const p = document.createElement('p');
+          p.className = 'extract';
+          p.textContent = item.snippet.replace(/<\/?[^>]+(>|$)/g, "") + '...';
+          li.appendChild(a);
+          li.appendChild(p);
+          resultsList.appendChild(li);
+        });
+      } catch (error) {
+        resultsList.innerHTML = '<li>An error occurred, please try again later.</li>';
+      }
+    });
+
+    backButton.addEventListener('click', () => {
+      articleView.style.display = 'none';
+      resultsList.style.display = 'block';
+    });
+
+    async function showArticle(pageid) {
+      resultsList.style.display = 'none';
+      articleView.style.display = 'block';
+      articleContent.innerHTML = 'Loading article...';
+
+      const url = `https://as.wikipedia.org/w/api.php?action=query&pageids=${pageid}&prop=extracts&explaintext=1&format=json&origin=*`;
+      try {
+        const response = await fetch(url);
+        const data = await response.json();
+        const page = data.query.pages[pageid];
+        articleContent.innerHTML = `<h2>${page.title}</h2><p>${page.extract.replace(/\n/g, '<br>')}</p>`;
+      } catch (error) {
+        articleContent.textContent = 'An error occurred, please try again later.';
+      }
+    }
+  </script>
+</body>
+  </html>
+  
